@@ -1,0 +1,21 @@
+
+"""
+Crea una funcion llamada lanzar_dados() genera aleatoreamente
+entre 1 y 6.
+El programa debe pedir al usuario cuantas veces quiere lanza 
+el dado.
+Imprimir la suma de 2 dados en cada lanzamiento
+"""
+import random
+
+def lanzar_dados(veces):
+    for i in range(veces):
+        dado1 = random.randint(1,6)
+        dado2 = random.randint(1,6)
+        print(f"Lanzamiento {i+1}: {dado1} / {dado2}, tu puntaje es:  {dado1+dado2}")
+        
+try:
+    cantidad = int(input("¿Cuántas veces quieres lanzar los dados?: "))
+    lanzar_dados(cantidad)
+except ValueError:
+    print("Error: Por favor, ingresa un número entero válido")
