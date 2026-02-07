@@ -1,3 +1,5 @@
+from ClaseAlumno import Alumno
+
 import csv
 
 alumnos = []
@@ -29,7 +31,23 @@ for alumno in alumnos:
         alumno["velocidad_ppm"] = float(
             alumno["velocidad_ppm"].replace(",", ".")
         )
-        alumnos_limpios.append(alumno)
+
+        alumno_obj = Alumno(
+            alumno["id_real"],
+            alumno["id_anonimo"],
+            alumno["grado"],
+            alumno["seccion"],
+            alumno["titulo_lectura"],
+            alumno["palabras_texto"],
+            alumno["num_preguntas"],
+            alumno["comprension_pct"],
+            alumno["tiempo_seg"],
+            alumno["velocidad_ppm"]
+             )   
+
+
+
+        alumnos_limpios.append(alumno_obj)
         
 
     except ValueError:
@@ -39,7 +57,12 @@ for alumno in alumnos:
    
 print("Alumnos válidos:", len(alumnos_limpios))
 print("Ejemplo alumno limpio:")
-print(alumnos_limpios[0])   
+print(alumnos_limpios[0])  
+
+print("Prueba de riesgo lector:")
+print(alumnos_limpios[0].id_real)
+print("Riesgo:", alumnos_limpios[0].calcular_riesgo_lector())
+
 
 
 
