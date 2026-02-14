@@ -1,4 +1,4 @@
-from vehiculos import Auto, Moto
+from ClasesVehiculos import Auto, Moto
 
 print("======== Sistema de Flota 'Móvil' ==============")
 placa = input("Ingrese la placa del vehículo: ")
