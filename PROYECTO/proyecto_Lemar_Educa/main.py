@@ -1,85 +1,244 @@
-from analisis import cargar_datos, clasificar_riesgo
+from analisis import AnalisisLector
+import pandas as pd
+
 
 def mostrar_menu():
     print("\n========================================================")
     print("     SISTEMA DE ANÁLISIS EVALUACIÓN COMPRENSIÓN LECTORA")
-    print("==========================================================")
+    print("========================================================")
     print("1. Mostrar datos")
     print("2. Estadística descriptiva")
-    print("3. Análisis por grado")
-    print("4. Clasificación de riesgo lector")
-    print("5. Relación velocidad vs comprensión")
-    print("6. Salir")
-    print("==========================================================")
+    print("3. Análisis institucional por grado")
+    print("4. Análisis detallado por año escolar")
+    print("5. Clasificación de riesgo lector")
+    print("6. Relación velocidad vs comprensión")
+    print("7. Salir")
+    print("========================================================")
+
 
 def main():
-    df = cargar_datos()
-    print("Valores únicos de sección:")
-    print(df["seccion"].unique())
-
+    analisis = AnalisisLector()
+    analisis.cargar_datos()
 
     while True:
         mostrar_menu()
         opcion = input("Seleccione una opción: ")
 
+        # ==================================================
         if opcion == "1":
             print("\nPrimeros 5 registros:")
-            print(df.head())
+            print(analisis.df.head())
 
+        # ==================================================
         elif opcion == "2":
             print("\nResumen estadístico:")
-            print(df.describe())
+            print(analisis.estadistica_descriptiva())
 
+        # ==================================================
         elif opcion == "3":
+            print("\n========================================================")
+            print("        ANÁLISIS INSTITUCIONAL POR GRADO")
+            print("========================================================")
 
-            print("\n========== ANÁLISIS INSTITUCIONAL POR GRADO ==========")
+            # 🔹 Asegurar columna riesgo_lector
+            if "riesgo_lector" not in analisis.df.columns:
+                analisis.clasificar_riesgo()
 
-          # 🔹 Aseguramos que exista la clasificación de riesgo
-            if "riesgo_lector" not in df.columns:
-               df = clasificar_riesgo(df)
-
-          # 🔹 Resumen general por grado
-            resumen_grado = df.groupby("grado").agg(
-              promedio_comprension=("comprension_pct", "mean"),
-              promedio_velocidad=("velocidad_ppm", "mean"),
-              desviacion_comprension=("comprension_pct", "std"),
-              total_alumnos=("id", "count")
+            # 🔹 Resumen por grado
+            resumen_grado = analisis.df.groupby("grado").agg(
+                total_alumnos=("id", "count"),
+                prom_comprension=("comprension_pct", "mean"),
+                prom_velocidad=("velocidad_ppm", "mean")
             ).round(2)
 
-            print("\n--- Resumen General por Año ---")
-            print(resumen_grado)
-
-         # 🔹 Ranking de peor a mejor según comprensión
-            ranking = resumen_grado.sort_values(by="promedio_comprension")
-
-            print("\n--- Ranking (Menor a Mayor Comprensión) ---")
-            print(ranking[["promedio_comprension"]])
-
-         # 🔹 Cálculo del % de Riesgo Alto + Crítico
-            riesgo_filtrado = df[df["riesgo_lector"].isin(["Riesgo Alto", "Riesgo Crítico"])]
+            # 🔹 Riesgo Alto + Crítico (cantidad y %)
+            riesgo_filtrado = analisis.df[
+                analisis.df["riesgo_lector"].isin(["Riesgo Alto", "Riesgo Crítico"])
+            ]
 
             riesgo_por_grado = riesgo_filtrado.groupby("grado")["id"].count()
-            total_por_grado = df.groupby("grado")["id"].count()
-
+            total_por_grado = analisis.df.groupby("grado")["id"].count()
             porcentaje_riesgo = ((riesgo_por_grado / total_por_grado) * 100).round(2)
 
-            print("\n--- % de Estudiantes en Riesgo Alto o Crítico ---")
-            print(porcentaje_riesgo)
+            # Asegurar que todos los grados aparezcan (si alguno tiene 0 riesgo)
+            riesgo_por_grado = riesgo_por_grado.reindex(total_por_grado.index, fill_value=0)
+            porcentaje_riesgo = porcentaje_riesgo.reindex(total_por_grado.index, fill_value=0)
 
-         # 🔹 Identificación automática
+            # 🔹 Imprimir resumen general
+            print("\nResumen General (por año):\n")
+            print("Año | Total | Prom. Comprensión | Prom. Velocidad")
+            print("--------------------------------------------------")
+
+            for grado, fila in resumen_grado.iterrows():
+                total = int(fila["total_alumnos"])
+                pc = fila["prom_comprension"]
+                pv = fila["prom_velocidad"]
+                pv_txt = "N/A" if pd.isna(pv) else f"{pv:.2f} ppm"
+                print(f"{grado}°  | {total:<5} | {pc:>7.2f}%           | {pv_txt}")
+
+            # 🔹 Imprimir indicadores de riesgo
+            print("\n\nIndicadores de Riesgo (Alto + Crítico):\n")
+            print("Año | En Riesgo | % Riesgo")
+            print("--------------------------")
+
+            for grado in resumen_grado.index:
+                cant = int(riesgo_por_grado.loc[grado])
+                pct = float(porcentaje_riesgo.loc[grado])
+                print(f"{grado}°  | {cant:<9} | {pct:.2f}%")
+
+            # 🔹 Ranking institucional por comprensión
+            ranking = resumen_grado.sort_values(by="prom_comprension")
+            orden = "  →  ".join([f"{g}°" for g in ranking.index])
+
+            # 🔹 Alertas automáticas
             peor_grado = ranking.index[0]
-            valor_peor_promedio = ranking.iloc[0]["promedio_comprension"]
+            peor_valor = ranking.iloc[0]["prom_comprension"]
 
-            mayor_riesgo = porcentaje_riesgo.idxmax()
-            valor_mayor_riesgo = porcentaje_riesgo.max()
+            mejor_grado = ranking.index[-1]
+            mejor_valor = ranking.iloc[-1]["prom_comprension"]
 
-            print("\n========== ALERTAS AUTOMÁTICAS ==========")
-            print(f"⚠ El {peor_grado}to año de primaria presenta el menor promedio de comprensión lectora ({valor_peor_promedio}%).")
-            print(f"🚨 El {mayor_riesgo}to año de primaria presenta el mayor porcentaje de estudiantes en Riesgo Alto o Crítico ({valor_mayor_riesgo}%).")
-            print("\nCantidad real de alumnos en riesgo por grado:")
-            print(riesgo_por_grado)
+            mayor_riesgo_grado = porcentaje_riesgo.idxmax()
+            mayor_riesgo_pct = porcentaje_riesgo.max()
+
+            print("\n\nRanking institucional (Comprensión):\n")
+            print(f"Peor → Mejor: {orden}")
+
+            print("\n\n========================================================")
+            print("                 ALERTAS AUTOMÁTICAS")
+            print("========================================================")
+            print(f"⚠  El {peor_grado}° año de primaria presenta el menor promedio de comprensión lectora ({peor_valor:.2f}%).")
+            print(f"🚨 El {mayor_riesgo_grado}° año de primaria presenta el mayor porcentaje de estudiantes en Riesgo Alto o Crítico ({mayor_riesgo_pct:.2f}%).")
+            print(f"🏆 El {mejor_grado}° año de primaria presenta el mejor promedio de comprensión lectora ({mejor_valor:.2f}%).")
+            print("\n(Nota: “En Riesgo” = Riesgo Alto + Riesgo Crítico)")
+
+        # ==================================================
         elif opcion == "4":
-            df = clasificar_riesgo(df)
+            # Análisis detallado por año escolar (grado)
+
+            # Asegurar riesgo
+            if "riesgo_lector" not in analisis.df.columns:
+                analisis.clasificar_riesgo()
+
+            # Pedir grado
+            while True:
+                try:
+                    grado_ingresado = int(input("Ingrese el año escolar (3,4,5,6): "))
+                    if grado_ingresado in [3, 4, 5, 6]:
+                        break
+                    print("Ingrese solo 3, 4, 5 o 6.")
+                except ValueError:
+                    print("Ingrese un número válido (3,4,5,6).")
+
+            df_grado = analisis.df[analisis.df["grado"] == grado_ingresado].copy()
+
+            print("\n========================================================")
+            print(f"        ANÁLISIS DETALLADO – {grado_ingresado}° AÑO")
+            print("========================================================")
+
+            # Promedios generales del grado
+            prom_grado_comp = df_grado["comprension_pct"].mean()
+            prom_grado_vel = df_grado["velocidad_ppm"].mean()  # puede ser NaN si faltan datos
+
+            vel_txt = "N/A" if pd.isna(prom_grado_vel) else f"{prom_grado_vel:.2f} ppm"
+
+            print(f"\nPromedio general {grado_ingresado}°:")
+            print(f"- Comprensión: {prom_grado_comp:.2f}%")
+            print(f"- Velocidad:   {vel_txt}\n")
+
+            # ---------------------------------------------------------
+            # Tabla resumen por sección
+            # ---------------------------------------------------------
+            # Promedios por sección
+            resumen_sec = df_grado.groupby("seccion").agg(
+                total=("id", "count"),
+                prom_comp=("comprension_pct", "mean"),
+                prom_vel=("velocidad_ppm", "mean")
+            ).round(2)
+
+            # % riesgo alto + crítico por sección
+            riesgo_ac = df_grado[df_grado["riesgo_lector"].isin(["Riesgo Alto", "Riesgo Crítico"])]
+            cant_riesgo_sec = riesgo_ac.groupby("seccion")["id"].count()
+            total_sec = df_grado.groupby("seccion")["id"].count()
+            pct_riesgo_sec = ((cant_riesgo_sec / total_sec) * 100).round(2)
+
+            # Asegurar secciones con 0 riesgo
+            pct_riesgo_sec = pct_riesgo_sec.reindex(total_sec.index, fill_value=0)
+            cant_riesgo_sec = cant_riesgo_sec.reindex(total_sec.index, fill_value=0)
+
+            # Unimos a resumen
+            resumen_sec["pct_riesgo_alto_critico"] = pct_riesgo_sec
+
+            # Ordenar por comprensión (de mejor a peor)
+            resumen_sec = resumen_sec.sort_values(by="prom_comp", ascending=False)
+
+            print("Resumen por sección:\n")
+            print("Sección | Total | Prom. Comprensión | Prom. Velocidad | % Riesgo (Alto+Crítico)")
+            print("---------------------------------------------------------------------------")
+
+            for seccion, fila in resumen_sec.iterrows():
+                total = int(fila["total"])
+                pc = fila["prom_comp"]
+                pv = fila["prom_vel"]
+                pv_txt = "N/A" if pd.isna(pv) else f"{pv:.2f} ppm"
+                pct = float(fila["pct_riesgo_alto_critico"])
+                print(f"{grado_ingresado}° {seccion:<3} | {total:<5} | {pc:>7.2f}%           | {pv_txt:<12} | {pct:>6.2f}%")
+
+            # ---------------------------------------------------------
+            # Distribución de riesgo por sección (conteo)
+            # ---------------------------------------------------------
+            print("\nDistribución de riesgo por sección (conteo):\n")
+
+            riesgos_orden = ["Riesgo Bajo", "Riesgo Medio", "Riesgo Alto", "Riesgo Crítico"]
+
+            for seccion in resumen_sec.index:
+                sub = df_grado[df_grado["seccion"] == seccion]
+                conteo = sub["riesgo_lector"].value_counts().reindex(riesgos_orden, fill_value=0)
+
+                print(
+                    f"Sección {grado_ingresado}° {seccion} → "
+                    f"Bajo: {int(conteo['Riesgo Bajo'])} | "
+                    f"Medio: {int(conteo['Riesgo Medio'])} | "
+                    f"Alto: {int(conteo['Riesgo Alto'])} | "
+                    f"Crítico: {int(conteo['Riesgo Crítico'])}"
+                )
+
+            # ---------------------------------------------------------
+            # Sección prioritaria
+            # (criterio: mayor % Alto+Crítico; si empate, menor comprensión)
+            # ---------------------------------------------------------
+            peor_por_riesgo = resumen_sec.sort_values(
+                by=["pct_riesgo_alto_critico", "prom_comp"],
+                ascending=[False, True]
+            ).iloc[0]
+
+            seccion_prioritaria = resumen_sec.sort_values(
+                by=["pct_riesgo_alto_critico", "prom_comp"],
+                ascending=[False, True]
+            ).index[0]
+
+            prom_prioritaria = peor_por_riesgo["prom_comp"]
+            pct_prioritaria = peor_por_riesgo["pct_riesgo_alto_critico"]
+
+            print("\n⚠ Sección prioritaria:", f"{grado_ingresado}° {seccion_prioritaria}")
+            print(f"- Menor desempeño (según prioridad): {prom_prioritaria:.2f}%")
+            print(f"- Mayor % de Alto+Crítico: {pct_prioritaria:.2f}%")
+
+            # ---------------------------------------------------------
+            # Impacto si se excluye la sección más baja en comprensión
+            # ---------------------------------------------------------
+            seccion_menor_comp = resumen_sec.sort_values(by="prom_comp").index[0]
+
+            df_sin_peor = df_grado[df_grado["seccion"] != seccion_menor_comp]
+            prom_sin_peor = df_sin_peor["comprension_pct"].mean()
+
+            impacto = prom_sin_peor - prom_grado_comp  # positivo = sube
+            print(f"\nSi se excluyera {grado_ingresado}° {seccion_menor_comp}:")
+            print(f"Promedio estimado de comprensión del {grado_ingresado}° año: {prom_sin_peor:.2f}%")
+            print(f"Impacto (sube): +{impacto:.2f} puntos porcentuales")
+
+        # ==================================================
+        elif opcion == "5":
+            df = analisis.clasificar_riesgo()
 
             total = len(df)
             print(f"\nTotal de alumnos registrados: {total}")
@@ -87,43 +246,35 @@ def main():
             while True:
                 try:
                     cantidad = int(input("¿Cuántos alumnos deseas visualizar? "))
-
                     if 1 <= cantidad <= total:
                         break
                     else:
                         print(f"Ingrese un número entre 1 y {total}")
-
                 except ValueError:
                     print("Ingrese un número válido.")
 
             print("\nResultados:")
-            print(df[[
-                
-                "id_real",
-                "comprension_pct",
-                "velocidad_ppm",
-                "grado",
-                "seccion",
-                "riesgo_lector"
-            ]].head(cantidad).to_string())
-
+            print(df[
+                ["id_real", "comprension_pct", "velocidad_ppm", "grado", "seccion", "riesgo_lector"]
+            ].head(cantidad).to_string())
 
             print("\nDistribución general de riesgo:")
             print(df["riesgo_lector"].value_counts())
 
-        elif opcion == "5":
-            print("\nRelación Velocidad vs Comprensión:")
-            correlacion = df["comprension_pct"].corr(df["velocidad_ppm"])
-            print("Correlación:", round(correlacion, 3))
-
+        # ==================================================
         elif opcion == "6":
+            print("\nRelación Velocidad vs Comprensión:")
+            print("Correlación:", analisis.correlacion_velocidad_comprension())
+
+        # ==================================================
+        elif opcion == "7":
             print("Saliendo del sistema...")
             break
 
+        # ==================================================
         else:
             print("Opción inválida. Intente nuevamente.")
 
+
 if __name__ == "__main__":
     main()
-#Version 1.0 21/02/2026
-
