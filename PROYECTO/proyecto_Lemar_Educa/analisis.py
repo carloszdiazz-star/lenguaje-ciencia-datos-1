@@ -105,3 +105,75 @@ class AnalisisLector:
         return round(
             self.df["comprension_pct"].corr(self.df["velocidad_ppm"]), 3
         )
+
+    def calcular_ifel(self):
+        """
+        Crea el Índice de Fluidez Efectiva Lemar (IFEL).
+        IFEL = comprensión_pct * factor_fluidez
+
+        factor_fluidez:
+        - velocidad < 80   -> 0.85
+        - 80 a 160         -> 1.00
+        - > 160            -> 0.90
+        - velocidad null   -> 0.70 (penalización mayor)
+        """
+
+        if self.df is None or self.df.empty:
+            raise ValueError("Primero debes cargar los datos (cargar_datos).")
+
+        # Asegurar riesgo_lector (útil para reportes y coherencia)
+        if "riesgo_lector" not in self.df.columns:
+            self.clasificar_riesgo()
+
+        def factor_fluidez(vel):
+            if pd.isna(vel):
+                return 0.70
+            if vel < 80:
+                return 0.85
+            elif vel <= 160:
+                return 1.00
+            else:
+                return 0.90
+
+        self.df["factor_fluidez"] = self.df["velocidad_ppm"].apply(factor_fluidez)
+        self.df["ifel"] = (self.df["comprension_pct"] * self.df["factor_fluidez"]).round(2)
+
+        return self.df
+
+    def reporte_ifel(self, top_n=10):
+        """
+        Devuelve:
+        - promedio IFEL por grado
+        - top N alumnos por IFEL
+        - alertas útiles (casos típicos del negocio)
+        """
+        if "ifel" not in self.df.columns:
+            self.calcular_ifel()
+
+        # Promedio IFEL por grado
+        prom_ifel_grado = (
+            self.df.groupby("grado")["ifel"]
+            .mean()
+            .round(2)
+            .sort_index()
+        )
+
+        # Top N (solo alumnos con velocidad disponible para que sea más justo)
+        df_con_vel = self.df.dropna(subset=["velocidad_ppm"]).copy()
+        top = (
+            df_con_vel.sort_values(by="ifel", ascending=False)
+            .head(top_n)[["id_real", "grado", "seccion", "comprension_pct", "velocidad_ppm", "ifel", "riesgo_lector"]]
+        )
+
+        # Casos típicos (muy útiles para Lemar):
+        # 1) Rápidos pero no comprenden
+        rapidos_sin_comp = df_con_vel[
+            (df_con_vel["velocidad_ppm"] > 160) & (df_con_vel["comprension_pct"] < 75)
+        ][["id_real", "grado", "seccion", "comprension_pct", "velocidad_ppm", "ifel"]].sort_values("ifel")
+
+        # 2) Comprenden bien pero muy lentos
+        lentos_con_comp = df_con_vel[
+            (df_con_vel["velocidad_ppm"] < 80) & (df_con_vel["comprension_pct"] >= 75)
+        ][["id_real", "grado", "seccion", "comprension_pct", "velocidad_ppm", "ifel"]].sort_values("ifel")
+
+        return prom_ifel_grado, top, rapidos_sin_comp, lentos_con_comp  

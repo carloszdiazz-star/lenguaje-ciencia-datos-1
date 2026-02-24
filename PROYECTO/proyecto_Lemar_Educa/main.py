@@ -26,8 +26,77 @@ def main():
 
         # ==================================================
         if opcion == "1":
-            print("\nPrimeros 5 registros:")
-            print(analisis.df.head())
+            # Asegurar riesgo
+            if "riesgo_lector" not in analisis.df.columns:
+                analisis.clasificar_riesgo()
+
+            # Pedir grado
+            while True:
+                try:
+                    grado = int(input("Ingrese el año escolar (3,4,5,6): "))
+                    if grado in [3, 4, 5, 6]:
+                        break
+                    print("Ingrese solo 3, 4, 5 o 6.")
+                except ValueError:
+                    print("Ingrese un número válido.")
+
+            # Pedir sección
+            seccion = input("Ingrese la sección (A, B, C): ").strip().upper()
+
+            # Filtrar salón
+            df_salon = analisis.df[
+                (analisis.df["grado"] == grado) & (analisis.df["seccion"] == seccion)
+            ].copy()
+
+            if df_salon.empty:
+                print(f"\nNo se encontraron alumnos para {grado}° {seccion}. Verifique grado/sección.")
+            else:
+                total_alumnos = len(df_salon)
+
+                # Resumen
+                prom_comp = df_salon["comprension_pct"].mean()
+                prom_vel = df_salon["velocidad_ppm"].mean()
+                vel_txt = "N/A" if pd.isna(prom_vel) else f"{prom_vel:.2f} ppm"
+
+                # Riesgo Alto + Crítico
+                en_riesgo = df_salon[df_salon["riesgo_lector"].isin(["Riesgo Alto", "Riesgo Crítico"])]
+                cant_riesgo = len(en_riesgo)
+                pct_riesgo = (cant_riesgo / total_alumnos) * 100
+
+                # Impresión tipo reporte
+                print("\n========================================================")
+                print(f"           LISTADO DE ALUMNOS – {grado}° {seccion}")
+                print("========================================================\n")
+
+                print(f"Total alumnos: {total_alumnos}\n")
+
+                print("Resumen del salón:")
+                print("----------------------------------------")
+                print(f"Promedio comprensión: {prom_comp:.2f}%")
+                print(f"Promedio velocidad:   {vel_txt}")
+                print(f"En Riesgo Alto/Crítico: {cant_riesgo} alumnos ({pct_riesgo:.2f}%)")
+                print("----------------------------------------\n")
+
+                print("Listado de estudiantes:\n")
+
+                # Mostrar todo el salón, ordenado por nombre (opcional)
+                df_salon = df_salon.sort_values(by="id_real")
+
+                # Tabla “bonita”
+                print("Nombre                              Comprensión   Velocidad   Riesgo")
+                print("-----------------------------------------------------------------------")
+
+                for _, fila in df_salon.iterrows():
+                    nombre = str(fila["id_real"])[:32].ljust(32)  # recorta y alinea
+                    comp = f"{fila['comprension_pct']:.2f}%".rjust(10)
+
+                    if pd.isna(fila["velocidad_ppm"]):
+                        vel = "N/A".rjust(10)
+                    else:
+                        vel = f"{fila['velocidad_ppm']:.2f}".rjust(10)
+
+                    riesgo = str(fila["riesgo_lector"]).replace("Riesgo ", "")
+                    print(f"{nombre} {comp} {vel}   {riesgo}")
 
         # ==================================================
         elif opcion == "2":
@@ -238,34 +307,113 @@ def main():
 
         # ==================================================
         elif opcion == "5":
-            df = analisis.clasificar_riesgo()
+            # Asegurar riesgo
+            if "riesgo_lector" not in analisis.df.columns:
+                analisis.clasificar_riesgo()
 
-            total = len(df)
-            print(f"\nTotal de alumnos registrados: {total}")
+            print("\n========================================================")
+            print("        VISUALIZAR ALUMNOS POR NIVEL DE RIESGO")
+            print("========================================================")
+            print("1. Riesgo Bajo")
+            print("2. Riesgo Medio")
+            print("3. Riesgo Alto")
+            print("4. Riesgo Crítico")
 
+            mapa = {
+                "1": "Riesgo Bajo",
+                "2": "Riesgo Medio",
+                "3": "Riesgo Alto",
+                "4": "Riesgo Crítico"
+            }
+
+            # Pedir nivel
+            while True:
+                op_riesgo = input("Seleccione el nivel de riesgo (1-4): ").strip()
+                if op_riesgo in mapa:
+                    riesgo_seleccionado = mapa[op_riesgo]
+                    break
+                print("Opción inválida. Ingrese un número del 1 al 4.")
+
+            # Filtrar
+            df_riesgo = analisis.df[analisis.df["riesgo_lector"] == riesgo_seleccionado].copy()
+
+            total = len(df_riesgo)
+
+            print("\n========================================================")
+            print(f"              ALUMNOS EN {riesgo_seleccionado.upper()}")
+            print("========================================================")
+            print(f"Total alumnos en este nivel: {total}\n")
+
+            if total == 0:
+                print("No se encontraron alumnos en este nivel de riesgo.")
+            else:
+                # Distribución por grado
+                dist_grado = df_riesgo.groupby("grado")["id"].count().sort_index()
+
+                print("Distribución por año escolar:")
+                for g, c in dist_grado.items():
+                    print(f"{g}° → {int(c)} alumnos")
+
+                # Preguntar cuántos mostrar
+                while True:
+                    try:
+                        cantidad = int(input("\n¿Cuántos alumnos desea visualizar?: "))
+                        if 1 <= cantidad <= total:
+                            break
+                        print(f"Ingrese un número entre 1 y {total}")
+                    except ValueError:
+                        print("Ingrese un número válido.")
+
+                # Ordenar para que se vea profesional:
+                # primero grado, luego sección, luego comprensión ascendente (más bajo primero)
+                df_riesgo = df_riesgo.sort_values(
+                    by=["grado", "seccion", "comprension_pct", "velocidad_ppm"],
+                    ascending=[True, True, True, True]
+                )
+
+                print("\nListado de alumnos (ordenado por grado y desempeño):\n")
+                print(df_riesgo[
+                    ["id_real", "grado", "seccion", "comprension_pct", "velocidad_ppm"]
+                ].head(cantidad).to_string(index=False))
+        # ==================================================
+        elif opcion == "6":
+            print("\n========================================================")
+            print("     ÍNDICE DE FLUIDEZ EFECTIVA LEMAR (IFEL)")
+            print("========================================================")
+
+            # Calcular IFEL (crea columnas ifel y factor_fluidez)
+            analisis.calcular_ifel()
+
+            # Pedir top
             while True:
                 try:
-                    cantidad = int(input("¿Cuántos alumnos deseas visualizar? "))
-                    if 1 <= cantidad <= total:
+                    top_n = int(input("¿Cuántos alumnos mostrar en el TOP? (ej: 10): "))
+                    if top_n > 0:
                         break
-                    else:
-                        print(f"Ingrese un número entre 1 y {total}")
+                    print("Ingrese un número mayor a 0.")
                 except ValueError:
                     print("Ingrese un número válido.")
 
-            print("\nResultados:")
-            print(df[
-                ["id_real", "comprension_pct", "velocidad_ppm", "grado", "seccion", "riesgo_lector"]
-            ].head(cantidad).to_string())
+            prom_ifel_grado, top, rapidos_sin_comp, lentos_con_comp = analisis.reporte_ifel(top_n=top_n)
 
-            print("\nDistribución general de riesgo:")
-            print(df["riesgo_lector"].value_counts())
+            print("\n--- Promedio IFEL por grado ---")
+            for grado, valor in prom_ifel_grado.items():
+                print(f"{grado}° → {valor}")
 
-        # ==================================================
-        elif opcion == "6":
-            print("\nRelación Velocidad vs Comprensión:")
-            print("Correlación:", analisis.correlacion_velocidad_comprension())
+            print(f"\n--- TOP {top_n} Lectores más eficientes (IFEL) ---")
+            print(top.to_string(index=False))
 
+            print("\n--- Casos: Muy rápidos pero con baja comprensión (vel>160 y comp<75) ---")
+            if rapidos_sin_comp.empty:
+                print("No se encontraron casos en este criterio.")
+            else:
+                print(rapidos_sin_comp.head(top_n).to_string(index=False))
+
+            print("\n--- Casos: Comprenden bien pero leen muy lento (vel<80 y comp>=75) ---")
+            if lentos_con_comp.empty:
+                print("No se encontraron casos en este criterio.")
+            else:
+                print(lentos_con_comp.head(top_n).to_string(index=False))
         # ==================================================
         elif opcion == "7":
             print("Saliendo del sistema...")
