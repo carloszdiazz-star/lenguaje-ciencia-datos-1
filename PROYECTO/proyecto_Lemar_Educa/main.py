@@ -11,7 +11,7 @@ def mostrar_menu():
     print("3. Análisis institucional por grado")
     print("4. Análisis detallado por año escolar")
     print("5. Clasificación de riesgo lector")
-    print("6. Relación velocidad vs comprensión")
+    print("6. ÍNDICE DE FLUIDEZ EFECTIVA LEMAR (IFEL)")
     print("7. Salir")
     print("========================================================")
 
