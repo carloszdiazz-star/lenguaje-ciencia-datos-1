@@ -1,0 +1,177 @@
+INDICACIONES DOCENTE PARA REALIZAR PPTS
+
+1.Resumen ejecutivo. Un resumen certero y rapido , palabras claves , que hace tu proyecto, que soluciona , un speech donde se venda el Proyecto de forma concisa. *Te dejo algo de contexto ...antes solo hacia estos informes a los colegio de forma muy vaga ...word y excel ..listado de alumnos ...comprensión porcentaje ...por salon ...creo que este sistema ayudara a mejorar estos informes notablemente 
+
+2.Diagrama de clases ...como esta estructurado, cuantas clases tiene , si hay herencia ...para entender la estructura y la base de datos . *Ya sabes que la base de datos empezo con un csv bien organizado por columnas ...el cual se importo a MySql ... 
+
+3.Funciones claves del proyecto... Pantallazo del menu de consola y que hace cada opcion en resumen ..
+
+
+
+CONTEXTO PARA HACER CONSULTAS CON IA
+
+📘 CONTEXTO BASE DEL PROYECTO
+Sistema de Análisis de Comprensión Lectora – Lemar Educa
+🎯 1. Objetivo del Proyecto
+
+Desarrollar un sistema en Python + MySQL que permita analizar evaluaciones de comprensión lectora y generar reportes automáticos con métricas estratégicas para toma de decisiones pedagógicas.
+
+El sistema transforma datos crudos en indicadores útiles.
+
+🧠 2. Problema que Resuelve
+
+Antes:
+
+Reportes manuales en Word y Excel
+
+Solo listados de alumnos y porcentajes
+
+Sin análisis profundo
+
+Sin clasificación de riesgo
+
+Sin métricas institucionales
+
+Ahora:
+
+Sistema automatizado
+
+Clasificación automática de riesgo lector
+
+Análisis por grado y sección
+
+Ranking institucional
+
+Índice de Fluidez Efectiva (IFEL)
+
+🗄 3. Estructura de Datos
+
+Base de datos MySQL: lemar_lectura
+Tabla principal: alumnos
+
+Columnas principales:
+
+id (int)
+
+id_real (varchar)
+
+id_anonimo (varchar)
+
+grado (int)
+
+seccion (varchar)
+
+palabras_texto (int)
+
+num_preguntas (int)
+
+comprension_pct (float)
+
+tiempo_seg (float)
+
+velocidad_ppm (float)
+
+Total actual: 258 estudiantes
+
+🏗 4. Arquitectura del Sistema
+
+Archivos principales:
+
+conexion.py → conexión a MySQL
+
+analisis.py → lógica de negocio (clase AnalisisLector)
+
+main.py → menú interactivo en consola
+
+Paradigma utilizado:
+
+Programación Orientada a Objetos (POO)
+
+Separación de responsabilidades
+
+Uso de Pandas para análisis estadístico
+
+📊 5. Métricas Implementadas
+🔹 Clasificación de Riesgo Lector
+
+Criterios actuales:
+
+Riesgo Crítico → Comprensión < 50 y Velocidad < 80
+
+Riesgo Alto → Comprensión < 60
+
+Riesgo Medio → Comprensión < 80
+
+Riesgo Bajo → Comprensión ≥ 80
+
+🔹 Análisis Institucional
+
+Promedio por grado
+
+% estudiantes en Riesgo Alto + Crítico
+
+Ranking institucional
+
+Alertas automáticas
+
+🔹 Índice de Fluidez Efectiva Lemar (IFEL)
+
+Hipótesis preliminar:
+
+La relación velocidad–comprensión no es lineal.
+
+Velocidad óptima detectada: 80–160 ppm
+
+Fórmula actual:
+
+IFEL = comprensión × factor_fluidez
+
+Factor:
+
+< 80 ppm → 0.85
+
+80–160 ppm → 1.00
+
+160 ppm → 0.90
+
+null → 0.70
+
+Estado actual:
+Modelo en validación con una muestra (258 estudiantes).
+
+🎓 6. Enfoque Académico
+
+Este proyecto integra:
+
+Ingeniería de Datos
+
+Estadística aplicada
+
+Análisis exploratorio (EDA)
+
+Programación Orientada a Objetos
+
+Diseño de indicadores propios
+
+🚀 7. Fase Actual
+
+Sistema funcional por consola con:
+
+Análisis por grado
+
+Análisis por sección
+
+Clasificación de riesgo
+
+IFEL
+
+Reportes estructurados
+
+Próxima fase:
+Validación en otro colegio y mejora del protocolo de aplicación del test.
+
+📌 INSTRUCCIÓN PARA CUALQUIER IA
+
+Cuando consulten en cualquier IA, deben decir algo como:
+
+Estoy desarrollando un sistema en Python + MySQL que analiza evaluaciones de comprensión lectora. Uso Pandas, POO, clasificación de riesgo lector e implementé un indicador llamado IFEL. El sistema funciona por consola y genera análisis institucional por grado y sección. Necesito ayuda para…

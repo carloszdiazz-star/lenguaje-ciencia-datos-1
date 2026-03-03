@@ -7,20 +7,20 @@ class AnalisisLector:
     def __init__(self):
         self.df = None
 
-    # 🔹 CARGAR DATOS DESDE MYSQL
+    #  CARGAR DATOS DESDE MYSQL
     def cargar_datos(self):
         conn = conectar()
         query = "SELECT * FROM alumnos"
         self.df = pd.read_sql(query, conn)
         conn.close()
 
-        # 🔹 LIMPIEZA DE TEXTO
+        #  LIMPIEZA DE TEXTO
         self.df["seccion"] = self.df["seccion"].str.strip().str.upper()
         self.df["id_real"] = self.df["id_real"].str.strip()
 
         return self.df
 
-    # 🔹 CLASIFICACIÓN DE RIESGO
+    #  CLASIFICACIÓN DE RIESGO
     def clasificar_riesgo(self):
 
         if self.df is None:
@@ -46,7 +46,7 @@ class AnalisisLector:
 
         return self.df
 
-    # 🔹 ESTADÍSTICA DESCRIPTIVA
+    #  ESTADÍSTICA DESCRIPTIVA
     def estadistica_descriptiva(self):
 
         if self.df is None:
@@ -54,7 +54,7 @@ class AnalisisLector:
 
         return self.df.describe()
 
-    # 🔹 ANÁLISIS INSTITUCIONAL POR GRADO
+    #  ANÁLISIS INSTITUCIONAL POR GRADO
     def analisis_por_grado(self):
 
         if self.df is None:
@@ -96,7 +96,7 @@ class AnalisisLector:
 
         return resumen_grado, ranking, porcentaje_riesgo, riesgo_por_grado, alertas
 
-    # 🔹 CORRELACIÓN
+    #  CORRELACIÓN
     def correlacion_velocidad_comprension(self):
 
         if self.df is None:

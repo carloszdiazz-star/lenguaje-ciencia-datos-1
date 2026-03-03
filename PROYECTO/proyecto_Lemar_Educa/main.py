@@ -109,18 +109,18 @@ def main():
             print("        ANÁLISIS INSTITUCIONAL POR GRADO")
             print("========================================================")
 
-            # 🔹 Asegurar columna riesgo_lector
+            #  Asegurar columna riesgo_lector
             if "riesgo_lector" not in analisis.df.columns:
                 analisis.clasificar_riesgo()
 
-            # 🔹 Resumen por grado
+            #  Resumen por grado
             resumen_grado = analisis.df.groupby("grado").agg(
                 total_alumnos=("id", "count"),
                 prom_comprension=("comprension_pct", "mean"),
                 prom_velocidad=("velocidad_ppm", "mean")
             ).round(2)
 
-            # 🔹 Riesgo Alto + Crítico (cantidad y %)
+            #  Riesgo Alto + Crítico (cantidad y %)
             riesgo_filtrado = analisis.df[
                 analisis.df["riesgo_lector"].isin(["Riesgo Alto", "Riesgo Crítico"])
             ]
@@ -133,7 +133,7 @@ def main():
             riesgo_por_grado = riesgo_por_grado.reindex(total_por_grado.index, fill_value=0)
             porcentaje_riesgo = porcentaje_riesgo.reindex(total_por_grado.index, fill_value=0)
 
-            # 🔹 Imprimir resumen general
+            #  Imprimir resumen general
             print("\nResumen General (por año):\n")
             print("Año | Total | Prom. Comprensión | Prom. Velocidad")
             print("--------------------------------------------------")
@@ -145,7 +145,7 @@ def main():
                 pv_txt = "N/A" if pd.isna(pv) else f"{pv:.2f} ppm"
                 print(f"{grado}°  | {total:<5} | {pc:>7.2f}%           | {pv_txt}")
 
-            # 🔹 Imprimir indicadores de riesgo
+            #  Imprimir indicadores de riesgo
             print("\n\nIndicadores de Riesgo (Alto + Crítico):\n")
             print("Año | En Riesgo | % Riesgo")
             print("--------------------------")
@@ -155,11 +155,11 @@ def main():
                 pct = float(porcentaje_riesgo.loc[grado])
                 print(f"{grado}°  | {cant:<9} | {pct:.2f}%")
 
-            # 🔹 Ranking institucional por comprensión
+            #  Ranking institucional por comprensión
             ranking = resumen_grado.sort_values(by="prom_comprension")
             orden = "  →  ".join([f"{g}°" for g in ranking.index])
 
-            # 🔹 Alertas automáticas
+            #  Alertas automáticas
             peor_grado = ranking.index[0]
             peor_valor = ranking.iloc[0]["prom_comprension"]
 
